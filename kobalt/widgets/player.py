@@ -1,15 +1,18 @@
 import pygame
 
+from .collide_rect import CollideRect
 from .widget import Widget
 
 
-class Player(Widget):
+class Player(CollideRect):
     """
     A controllable player character with movement, jumping, crouching,
     and optional air-strafing physics.
 
     Parameters
     ----------
+    screen_size : tuple[int, int]
+        Dimensions of the screen (width, height).
     width : int
         Width of the player sprite.
     height : int
@@ -20,8 +23,6 @@ class Player(Widget):
         Frames per second for timing calculations. Defaults to 60.
     pos : tuple[int, int], optional
         Initial (x, y) position. Defaults to (0, 0).
-    screen_size : tuple[int, int], optional
-        Dimensions of the screen (width, height). Defaults to (1280, 720).
     speed : float, optional
         Base horizontal speed. Defaults to 400.
     gravity : float, optional
@@ -58,12 +59,12 @@ class Player(Widget):
 
     def __init__(
         self,
+        screen_size: tuple[int, int],
         width: int,
         height: int,
         color: tuple[int, int, int],
         fps: int = 60,
         pos: tuple[int, int] = (0, 0),
-        screen_size: tuple[int, int] = (1280, 720),
         speed: float = 200,
         gravity: float = 0.5,
         disable_user_controls: bool = False,
@@ -81,8 +82,7 @@ class Player(Widget):
         crouching_speed: float | None = None,
         crouching_gravity_pull: float | None = None,
     ):
-        self.player_rect = pygame.Rect(pos, (width, height))
-        super().__init__(pos[0], pos[1], width, height, color)
+        super().__init__(screen_size, pos[0], pos[1], width, height, color)
         self.fps = fps
         self.speed = speed
         self.original_speed = speed
@@ -95,6 +95,10 @@ class Player(Widget):
         self.on_ground = False
         self.jump_vy = 0
         self.auto_jump = auto_jump
+
+        # velocity
+        self.vx = 0.0
+        self.vy = 0.0
 
         # air strafing
         self.enable_air_strafing = enable_air_strafing
@@ -140,25 +144,24 @@ class Player(Widget):
         self.standing_height = height
         self.crouch_height = int(self.standing_height // self.crouch_height_factor)
 
-        # position ratios
-        self.ratio_x = (pos[0] + width) / screen_size[0]
-        self.ratio_y = (pos[1] + height) / screen_size[1]
-
         # movement flags
         self.moving_right = False
         self.moving_left = False
-        self.first_move_direction = None
         self.can_move = True
         self.disable_user_controls = disable_user_controls
 
     # Update loop ---------------------------------------------------
     def update(self, dt, surf: pygame.Surface):
         """Update player state each frame."""
+        super().update(surf)
         size = surf.get_size()
 
         # --- update logic ---
         keys = pygame.key.get_pressed() if not self.disable_user_controls else None
         self.collision = False
+
+        self.vx = 0.0  # Reset horizontal velocity each frame
+
         if self.can_move:
             # movement flags
             moving_right = (keys and keys[pygame.K_d]) or self.moving_right
@@ -204,8 +207,6 @@ class Player(Widget):
                         self.height = self.standing_height
                         self.y = bottom - self.height
 
-            self.update_ratio_from_position()
-
             # add horizontal movement (after all speed logic)
             if self.crouching and self.on_ground:
                 effective_speed = self.crouching_speed
@@ -215,11 +216,11 @@ class Player(Widget):
                 effective_speed = self.original_speed + self.air_strafe_bonus
 
             if moving_right and not moving_left:
-                self.x += effective_speed * dt
-                self.first_move_direction = "right"
-            if moving_left and not moving_right:
-                self.x -= effective_speed * dt
-                self.first_move_direction = "left"
+                self.vx = effective_speed
+            elif moving_left and not moving_right:
+                self.vx = -effective_speed
+            else:
+                self.vx = 0.0
 
         # set self.speed for display/state
         if self.crouching and self.on_ground:
@@ -231,7 +232,11 @@ class Player(Widget):
 
         # gravity handle (vertical)
         self.jump_vy += self.gravity
-        self.y += self.jump_vy
+        self.vy = self.jump_vy
+
+        # Apply velocities to position
+        self.x += self.vx * dt
+        self.y += self.vy
 
         # floor border
         self._floor_border(size)
@@ -260,7 +265,7 @@ class Player(Widget):
         """Render the player to the given surface."""
         player_surface = pygame.Surface((self.width, self.height))
         player_surface.fill(self.color)
-        surf.blit(player_surface, self.player_rect)
+        surf.blit(player_surface, self.rect)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle keyboard events for jumping."""
@@ -285,17 +290,6 @@ class Player(Widget):
     def jump(self) -> None:
         """Trigger a jump."""
         self.vy = self.jump_vy = -self.jump_height
-
-    def update_position(self, new_screen_size: tuple[int, int]) -> None:
-        """Recalculate position on window resize."""
-        self.screen_size = new_screen_size
-        self.x = int(self.ratio_x * new_screen_size[0]) - self.width
-        self.y = int(self.ratio_y * new_screen_size[1]) - self.height
-
-    def update_ratio_from_position(self) -> None:
-        """Update internal screen ratio based on current position."""
-        self.ratio_x = (self.x + self.width) / self.screen_size[0]
-        self.ratio_y = (self.y + self.height) / self.screen_size[1]
 
     # Private methods ----------------------------------------------
     def _floor_border(self, size: tuple[int, int]) -> None:
@@ -328,6 +322,10 @@ class Player(Widget):
     def is_air_strafing_enabled(self) -> bool:
         return self.enable_air_strafing
 
+    def is_moving(self) -> bool:
+        """Checks if the player is currently moving"""
+        return self.vx != 0 or self.vy != 0
+
     # Toggles -------------------------------------------------------
     def toggle_air_strafing(self) -> None:
         self.enable_air_strafing = not self.enable_air_strafing
@@ -341,39 +339,7 @@ class Player(Widget):
         else:
             self.start_movement()
 
-    # Properties ----------------------------------------------------
-    @property
-    def x(self) -> int:
-        return self.player_rect.x
-
-    @x.setter
-    def x(self, val: int) -> None:
-        self.player_rect.x = int(val)
-
-    @property
-    def y(self) -> int:
-        return self.player_rect.y
-
-    @y.setter
-    def y(self, val: int) -> None:
-        self.player_rect.y = int(val)
-
-    @property
-    def width(self) -> int:
-        return self.player_rect.width
-
-    @width.setter
-    def width(self, val: int) -> None:
-        self.player_rect.width = int(val)
-
-    @property
-    def height(self) -> int:
-        return self.player_rect.height
-
-    @height.setter
-    def height(self, val: int) -> None:
-        self.player_rect.height = int(val)
-
+    # Set ----------------------------------------------------
     def set_size(self, width: int, height: int) -> None:
         self.width = width
         self.height = height

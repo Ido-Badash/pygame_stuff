@@ -4,10 +4,12 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pygame
-from widgets import Player
+from widgets import CollideRect, Player
 
 from libs.winmode import PygameWindowController, WindowStates
 
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
 SIZE = (1280, 720)
@@ -29,6 +31,7 @@ def main():
     player_w = 40
     player_h = 40
     player = Player(
+        SIZE,
         player_w,
         player_h,
         color=BLUE,
@@ -36,6 +39,28 @@ def main():
         pos=(w // 2 - player_w // 2, h - player_h),
         speed=200,
     )
+
+    # wall
+    wall_1_w = 50
+    wall_1_h = 100
+    wall_1 = CollideRect(
+        SIZE, wall_1_w, SIZE[1] - wall_1_h - 10, wall_1_w, wall_1_h, (GREEN)
+    )
+
+    wall_2_w = 200
+    wall_2_h = 30
+    wall_2 = CollideRect(  # bottom right
+        SIZE,
+        SIZE[0] - wall_2_w - 10,
+        SIZE[1] - wall_2_h - 10,
+        wall_2_w,
+        wall_2_h,
+        (RED),
+    )
+
+    walls = [wall_1, wall_2]
+
+    widgets = [player] + walls
 
     while running:
         # events
@@ -52,7 +77,8 @@ def main():
                         else WindowStates.FULLSCREEN
                     )
                     w, h = screen.get_size()
-                    player.update_position((w, h))
+                    for widget in widgets:
+                        widget.update_position((w, h))
 
                 player.handle_event(event)
 
@@ -64,6 +90,15 @@ def main():
         # player
         player.update(dt, screen)
         player.draw(screen)
+
+        # wall
+        for wall in walls:
+            wall.update(screen)
+            wall.draw(screen)
+
+        # collisions
+        if player.is_moving():
+            player.resolve_collisions(walls)
 
         # display update
         pygame.display.update()

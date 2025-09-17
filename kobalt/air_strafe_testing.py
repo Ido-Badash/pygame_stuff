@@ -35,6 +35,7 @@ def main():
     player_w = 40
     player_h = 40
     player = Player(
+        SIZE,
         player_w,
         player_h,
         color=BLUE,
@@ -45,6 +46,7 @@ def main():
 
     # tracker trail
     player_trail = Trail(
+        SIZE,
         color=GREEN if player.is_air_strafing_enabled() else RED,
         lifetime=3000,
         max_alpha=100,

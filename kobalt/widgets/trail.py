@@ -6,6 +6,7 @@ from .widget import Widget
 class Trail(Widget):
     def __init__(
         self,
+        screen_size,
         color=(0, 0, 255),
         width=1,
         height=1,
@@ -13,7 +14,7 @@ class Trail(Widget):
         max_alpha=255,
         min_alpha=0,
     ):
-        super().__init__(0, 0, width, height, color)
+        super().__init__(screen_size, 0, 0, width, height, color)
         self.lifetime = lifetime  # ms
         self.max_alpha = max_alpha
         self.min_alpha = min_alpha
