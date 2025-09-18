@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pygame
-from widgets import CollideRect, Player, Trail
+from widgets import Player, Trail, Widget
 
 from libs.winmode import PygameWindowController, WindowStates
 
@@ -27,22 +27,6 @@ def main():
 
     w, h = screen.get_size()
 
-    # player
-    player_image = pygame.image.load("kobalt/assets/neon.png").convert_alpha()
-    player_w = 80
-    player_h = 80
-    player = Player(
-        screen_size=SIZE,
-        x=w // 2 - player_w // 2,
-        y=h - player_h,
-        width=player_w,
-        height=player_h,
-        color=BLUE,
-        image=player_image,
-        fps=FPS,
-        speed=200,
-    )
-
     # trail
     trail = Trail(
         SIZE,
@@ -51,33 +35,44 @@ def main():
         max_alpha=100,
     )
 
-    # platforms
+    # platforms - calculated parkour
     platform_image = pygame.image.load("kobalt/assets/platform.png").convert_alpha()
-    platform_1_w = 200
-    platform_1_h = 100
-    platform_1 = CollideRect(
+    platforms = []
+
+    base_y = SIZE[1] - 50
+    base_x = 300
+    platform_w = 120
+    platform_h = 30
+    x_gap = 180  # horizontal distance between platforms
+    y_gap = 20  # vertical distance (must be <= h_max)
+
+    for i in range(5):
+        plat = Widget(
+            screen_size=SIZE,
+            x=base_x + i * x_gap,
+            y=base_y - i * y_gap,
+            width=platform_w,
+            height=platform_h,
+            color=GREEN if i < 4 else BLUE,  # last platform is goal
+            image=None,
+        )
+        platforms.append(plat)
+
+    # player
+    player_image = pygame.image.load("kobalt/assets/player.png").convert_alpha()
+    player_w = 40
+    player_h = 40
+    player = Player(
         screen_size=SIZE,
-        x=platform_1_w,
-        y=SIZE[1] - platform_1_h + 20,
-        width=platform_1_w,
-        height=platform_1_h,
-        color=(GREEN),
-        image=platform_image,
+        x=player_w,
+        y=h - player_h,
+        width=player_w,
+        height=player_h,
+        color=BLUE,
+        image=player_image,
     )
 
-    platform_2_w = 70
-    platform_2_h = 200
-    platform_2 = CollideRect(  # bottom right
-        screen_size=SIZE,
-        x=100,
-        y=SIZE[1] - platform_2_h - 50,
-        width=platform_2_w,
-        height=platform_2_h,
-        color=(RED),
-        image=platform_image,
-    )
-
-    platforms = [platform_1, platform_2]
+    widgets = [player] + platforms
 
     widgets = [player] + platforms
 
@@ -98,7 +93,6 @@ def main():
                     w, h = screen.get_size()
                     for widget in widgets:
                         widget.update_position((w, h))
-
                 player.handle_event(event)
 
         # drawing / updating
@@ -107,23 +101,15 @@ def main():
         screen.fill((0, 0, 0))
 
         # tracker trail
-        trail.width = player.speed * dt + 2
-        trail.height = player.speed * dt + 2
-        trail.update(player.x + player.width // 2, player.y + player.height // 2)
-        trail.draw(screen)
+        trail.width, trail.height = player.speed, player.speed
+        trail.draw(screen, player.x + player.width // 2, player.y + player.height // 2)
 
         # player
-        player.update(dt, screen)
-        player.draw(screen)
+        player.draw(screen, dt)
 
-        # platform
-        for platform in platforms:
-            platform.update(screen)
-            platform.draw(screen)
-
-        # collisions
-        if player.is_moving():
-            player.resolve_collisions(platforms)
+        # # platforms
+        # for platform in platforms:d
+        #     platform.draw(screen, dt)
 
         # display update
         pygame.display.update()

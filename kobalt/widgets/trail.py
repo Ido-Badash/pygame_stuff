@@ -20,7 +20,7 @@ class Trail(Widget):
         self.min_alpha = min_alpha
         self.tracks = []  # (x, y, timestamp)
 
-    def update(self, x, y):
+    def update_tracks(self, x, y):
         now = pygame.time.get_ticks()
         # stores all current params with each track
         self.tracks.append(
@@ -41,7 +41,8 @@ class Trail(Widget):
             track for track in self.tracks if now - track["t"] < track["lifetime"]
         ]
 
-    def draw(self, surf: pygame.Surface):
+    def draw(self, surf: pygame.Surface, x, y):
+        self.update_tracks(x, y)
         now = pygame.time.get_ticks()
         for track in self.tracks:
             age = now - track["t"]

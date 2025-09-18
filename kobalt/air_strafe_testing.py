@@ -3,8 +3,8 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
 import pygame
+from analysis.plot_speed import plot_speed
 from widgets import Player, Trail
 
 from libs.winmode import PygameWindowController, WindowStates
@@ -32,49 +32,44 @@ def main():
     w, h = screen.get_size()
 
     # player
+    player_image = pygame.image.load("kobalt/assets/player.png").convert_alpha()
     player_w = 40
     player_h = 40
     player = Player(
-        SIZE,
-        player_w,
-        player_h,
+        screen_size=SIZE,
+        x=player_w,
+        y=h - player_h,
+        width=player_w,
+        height=player_h,
         color=BLUE,
-        fps=FPS,
-        pos=(w // 2 - player_w // 2, h - player_h),
-        speed=200,
+        image=player_image,
     )
 
     # tracker trail
-    player_trail = Trail(
+    trail = Trail(
         SIZE,
-        color=GREEN if player.is_air_strafing_enabled() else RED,
-        lifetime=3000,
+        color=(17, 61, 158),
+        lifetime=2000,
         max_alpha=100,
-        width=3,
-        height=3,
     )
 
     # keybinds and state display setup
     keybinds = [
         ("P", "Toggle Air Strafing"),
-        ("O", "Toggle Auto Jump"),
         ("F11", "Fullscreen"),
         ("ESC", "Quit"),
         ("SPACE", "Jump"),
         ("A/D", "Move Left/Right"),
-        ("M", "Toggle Movement"),
     ]
 
     def get_state_lines():
         return [
-            ("Air Strafing:", player.is_air_strafing_enabled()),
-            ("Auto Jump:", player.auto_jump),
+            ("Air Strafing:", player.air_strafe),
             ("On Ground:", player.on_ground),
-            ("Speed:", min(int(player.speed), player.max_air_strafe_speed)),
-            ("Strafing:", player.strafing),
-            ("Collision:", player.collision),
-            ("Can Move:", player.can_move),
+            ("Speed:", round(player.speed, 1)),
         ]
+
+    speeds = []  # for plotting speed over time
 
     while running:
         # events
@@ -85,15 +80,8 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 if event.key == pygame.K_p:
-                    player.toggle_air_strafing()
-                    if player.is_air_strafing_enabled():
-                        player_trail.set_color(GREEN)
-                    else:
-                        player_trail.set_color(RED)
-                if event.key == pygame.K_o:
-                    player.toggle_auto_jump()
-                if event.key == pygame.K_m:
-                    player.toggle_movement()
+                    player.air_strafe = not player.air_strafe
+                    trail.set_color(GREEN if player.air_strafe else RED)
                 if event.key == pygame.K_F11:
                     controller.set_mode(
                         WindowStates.WINDOWED_STATELESS
@@ -102,8 +90,8 @@ def main():
                     )
                     w, h = screen.get_size()
                     player.update_position((w, h))
-
-            player.handle_event(event)
+                # pass only key events to the player
+                player.handle_event(event)
 
         # drawing / updating
         dt = clock.tick(FPS) / 1000
@@ -111,14 +99,12 @@ def main():
         screen.fill((0, 0, 0))
 
         # tracker trail
-        player_trail.width = player.speed * dt + 2
-        player_trail.height = player.speed * dt + 2
-        player_trail.update(player.x + player.width // 2, player.y + player.height // 2)
-        player_trail.draw(screen)
+        trail.width, trail.height = player.speed, player.speed
+        trail.draw(screen, player.x + player.width // 2, player.y + player.height // 2)
 
         # player
-        player.update(dt, screen)
-        player.draw(screen)
+        player.draw(screen, dt)
+        speeds.append(float(player.speed))
 
         # Draw keybinds in top right, key in yellow, rest in gray
         y_offset = 10
@@ -140,7 +126,7 @@ def main():
                 if label in ["Air Strafing", "Auto Jump"]:
                     val_text = "ON" if value else "OFF"
                 elif label == "Strafing":
-                    val_text = "YES" if player.is_air_strafing_enabled() else "DISABLED"
+                    val_text = "YES" if player.air_strafe else "DISABLED"
                 else:
                     val_text = "YES" if value else "NO"
                 val_surf = FONT.render(val_text, True, color)
@@ -159,6 +145,12 @@ def main():
         pygame.display.update()
 
     pygame.quit()
+
+    # plot speeds after exiting the game loop
+    try:
+        plot_speed(speeds, title="Player Speed over Frames", show=True)
+    except Exception as e:
+        print(f"Plot skipped: {e}")
 
 
 if __name__ == "__main__":
