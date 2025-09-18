@@ -9,50 +9,66 @@ class Player(CollideRect):
     A controllable player character with movement, jumping, crouching,
     and optional air-strafing physics.
 
+    This implementation uses velocity-based movement with horizontal velocity (vx)
+    and vertical velocity (vy) for smooth physics-based character control.
+
     Parameters
     ----------
-    screen_size : tuple[int, int]
-        Dimensions of the screen (width, height).
     width : int
         Width of the player sprite.
     height : int
         Height of the player sprite.
-    color : tuple[int, int, int]
-        RGB color of the player.
+    color : tuple[int, int, int], optional
+        RGB color of the player. Defaults to blue (0, 0, 255).
+    image : pygame.Surface, optional
+        Image sprite to use instead of solid color. Defaults to None.
     fps : int, optional
         Frames per second for timing calculations. Defaults to 60.
+    pos : tuple[int, int], optional
+        Initial (x, y) position. Defaults to (0, 0).
     speed : float, optional
-        Base horizontal speed. Defaults to 400.
+        Base horizontal speed. Defaults to 200.
     gravity : float, optional
         Gravitational acceleration. Defaults to 0.5.
-    jump_height : float, optional
-        Vertical velocity for jumps. Defaults to 8.
+    disable_user_controls : bool, optional
+        Disable all keyboard input. Defaults to False.
+    enable_crouching : bool, optional
+        Enable or disable crouching. Defaults to True.
     enable_air_strafing : bool, optional
         Enable or disable air-strafing. Defaults to True.
+    auto_jump : bool, optional
+        Automatically jump upon landing. Defaults to False.
+    jump_height : float, optional
+        Vertical velocity for jumps. Defaults to 8.
     air_strafe_power : float, optional
-        Acceleration rate while strafing in the air. Defaults to 10.
+        Acceleration rate while strafing in the air. 
+        Defaults to speed/40 for consistent scaling.
     max_air_strafe_speed : float, optional
         Maximum air-strafe speed. Defaults to 1000.
     air_strafe_restore_rate : float, optional
         Rate at which the air-strafe bonus decays. Defaults to 1.
     ground_reset_time_ms : int, optional
-        Time on ground before resetting air-strafe bonus (ms). Defaults to 1000/fps.
+        Time on ground before resetting air-strafe bonus (ms). Defaults to fps.
     air_strafe_bonus_decay_threshold : float, optional
         Threshold below which bonus resets to 0. Defaults to 0.001.
     air_strafe_bonus_dt_scale : float, optional
         Scaling factor for delta time adjustments. Defaults to fps.
-    enable_crouching : bool, optional
-        Enable or disable crouching. Defaults to True.
     crouch_height_factor : float, optional
         Factor to reduce height when crouching. Defaults to 1.2.
     crouching_speed : float, optional
         Movement speed while crouching. Defaults to 50% of base speed.
     crouching_gravity_pull : float, optional
-        Reduced gravity effect while crouching. Defaults to 0.7.
-    disable_user_controls : bool, optional
-        Disable all keyboard input. Defaults to False.
-    auto_jump : bool, optional
-        Automatically jump upon landing. Defaults to False.
+        Reduced gravity effect while crouching. Defaults to 1.0.
+    screen_size : tuple[int, int], optional
+        Dimensions of the screen (width, height). Defaults to (1280, 720).
+
+    Key Features
+    -----------
+    - Velocity-based movement using vx (horizontal) and vy (vertical) velocities
+    - Air-strafing that only increases when moving in exactly one direction
+    - Collision detection and resolution
+    - Crouching mechanics with height adjustment
+    - Configurable physics parameters that scale with base speed
     """
 
     def __init__(
@@ -171,14 +187,15 @@ class Player(CollideRect):
             # crouch input
             if keys and keys[pygame.K_LSHIFT]:
                 self.crouching = True
-            else:
+            elif not self.disable_user_controls:
                 self.crouching = False
+            # If user controls are disabled, keep the current crouching state
 
-            # strafing only in air and when moving right or left
+            # strafing only in air and when moving right or left (but not both)
             self.strafing = (
                 not self.on_ground
                 and self.enable_air_strafing
-                and (moving_right or moving_left)
+                and ((moving_right and not moving_left) or (moving_left and not moving_right))
             )
 
             # --- AIR STRAFING (modify air_strafe_bonus) ---
