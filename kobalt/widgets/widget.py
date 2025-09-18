@@ -12,6 +12,7 @@ class Widget(ABC):
         width=1,
         height=1,
         color=(255, 255, 255),
+        image=None,
     ):
         self.screen_size = screen_size
         self.x = x
@@ -19,7 +20,7 @@ class Widget(ABC):
         self.width = width
         self.height = height
         self.color = color
-
+        self.image = image
         # position ratios
         self.ratio_x = (x + width) / screen_size[0]
         self.ratio_y = (y + height) / screen_size[1]
@@ -56,6 +57,9 @@ class Widget(ABC):
 
     def set_color(self, color):
         self.color = color
+
+    def set_image(self, image):
+        self.image = image
 
     @property
     def rect(self):

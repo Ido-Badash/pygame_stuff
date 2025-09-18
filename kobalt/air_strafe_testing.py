@@ -50,6 +50,8 @@ def main():
         color=GREEN if player.is_air_strafing_enabled() else RED,
         lifetime=3000,
         max_alpha=100,
+        width=3,
+        height=3,
     )
 
     # keybinds and state display setup
@@ -109,8 +111,8 @@ def main():
         screen.fill((0, 0, 0))
 
         # tracker trail
-        player_trail.width = player.speed * dt
-        player_trail.height = player.speed * dt
+        player_trail.width = player.speed * dt + 2
+        player_trail.height = player.speed * dt + 2
         player_trail.update(player.x + player.width // 2, player.y + player.height // 2)
         player_trail.draw(screen)
 

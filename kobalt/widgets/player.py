@@ -21,8 +21,6 @@ class Player(CollideRect):
         RGB color of the player.
     fps : int, optional
         Frames per second for timing calculations. Defaults to 60.
-    pos : tuple[int, int], optional
-        Initial (x, y) position. Defaults to (0, 0).
     speed : float, optional
         Base horizontal speed. Defaults to 400.
     gravity : float, optional
@@ -60,11 +58,13 @@ class Player(CollideRect):
     def __init__(
         self,
         screen_size: tuple[int, int],
+        x: int,
+        y: int,
         width: int,
         height: int,
         color: tuple[int, int, int],
+        image: pygame.Surface | None = None,
         fps: int = 60,
-        pos: tuple[int, int] = (0, 0),
         speed: float = 200,
         gravity: float = 0.5,
         disable_user_controls: bool = False,
@@ -82,7 +82,7 @@ class Player(CollideRect):
         crouching_speed: float | None = None,
         crouching_gravity_pull: float | None = None,
     ):
-        super().__init__(screen_size, pos[0], pos[1], width, height, color)
+        super().__init__(screen_size, x, y, width, height, color, image)
         self.fps = fps
         self.speed = speed
         self.original_speed = speed
@@ -263,9 +263,11 @@ class Player(CollideRect):
 
     def draw(self, surf: pygame.Surface) -> None:
         """Render the player to the given surface."""
-        player_surface = pygame.Surface((self.width, self.height))
-        player_surface.fill(self.color)
-        surf.blit(player_surface, self.rect)
+        if self.image:
+            img = pygame.transform.scale(self.image, (self.width, self.height))
+            surf.blit(img, (self.x, self.y))
+        else:
+            pygame.draw.rect(surf, self.color, self.rect)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle keyboard events for jumping."""
