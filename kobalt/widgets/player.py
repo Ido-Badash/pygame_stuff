@@ -57,14 +57,12 @@ class Player(CollideRect):
 
     def __init__(
         self,
-        screen_size: tuple[int, int],
-        x: int,
-        y: int,
         width: int,
         height: int,
-        color: tuple[int, int, int],
+        color: tuple[int, int, int] = (0, 0, 255),
         image: pygame.Surface | None = None,
         fps: int = 60,
+        pos: tuple[int, int] = (0, 0),
         speed: float = 200,
         gravity: float = 0.5,
         disable_user_controls: bool = False,
@@ -81,7 +79,9 @@ class Player(CollideRect):
         crouch_height_factor: float | None = None,
         crouching_speed: float | None = None,
         crouching_gravity_pull: float | None = None,
+        screen_size: tuple[int, int] = (1280, 720),
     ):
+        x, y = pos
         super().__init__(screen_size, x, y, width, height, color, image)
         self.fps = fps
         self.speed = speed
@@ -126,6 +126,7 @@ class Player(CollideRect):
         self.air_strafe_bonus = 0.0
         self.strafing = False
         self.collision = False
+        self.ground_time = 0
 
         # crouching
         self.enable_crouching = enable_crouching

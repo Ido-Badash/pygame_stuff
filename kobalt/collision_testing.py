@@ -28,19 +28,19 @@ def main():
     w, h = screen.get_size()
 
     # player
-    player_image = pygame.image.load("kobalt/assets/neon.png").convert_alpha()
+    # player_image = pygame.image.load("kobalt/assets/neon.png").convert_alpha()
+    player_image = None  # Use solid color instead
     player_w = 80
     player_h = 80
     player = Player(
-        screen_size=SIZE,
-        x=w // 2 - player_w // 2,
-        y=h - player_h,
         width=player_w,
         height=player_h,
         color=BLUE,
         image=player_image,
         fps=FPS,
+        pos=(w // 2 - player_w // 2, h - player_h),
         speed=200,
+        screen_size=SIZE,
     )
 
     # trail
@@ -52,7 +52,8 @@ def main():
     )
 
     # platforms
-    platform_image = pygame.image.load("kobalt/assets/platform.png").convert_alpha()
+    # platform_image = pygame.image.load("kobalt/assets/platform.png").convert_alpha()
+    platform_image = None  # Use solid color instead
     platform_1_w = 200
     platform_1_h = 100
     platform_1 = CollideRect(
